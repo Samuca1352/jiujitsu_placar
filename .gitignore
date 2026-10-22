@@ -1,0 +1,16 @@
+# Ambientes virtuais
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Vídeos gerados de saída
+videos/saida*.mp4
+
+# Arquivos temporários / modelos
+*.task

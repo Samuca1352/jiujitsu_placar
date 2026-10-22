@@ -1,0 +1,7 @@
+services:
+  placar:
+    build: .
+    ports: ["8000:8000"]
+    volumes: ["./videos:/videos"]   # vídeos aqui viram /videos/x.mp4
+    command: ["--fonte", "${FONTE:-/videos/teste.mp4}", "--cor", "${COR:-verde}", "--nomes", "${NOMES:-Verde,Branco}"]
+    # câmera USB num Linux nativo (no WSL não existe): devices: ["/dev/video0:/dev/video0"] e FONTE=0

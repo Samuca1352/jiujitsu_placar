@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Placar JJ</title>
+<style>
+  :root { --bg:#0b0d10; --card:#14171c; --line:#242932; --txt:#e8eaed; --mut:#8a93a3; --cor:#22c55e; --outro:#e5e7eb; }
+  * { box-sizing:border-box; margin:0; }
+  body { background:var(--bg); color:var(--txt); font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; padding:16px; min-height:100vh; }
+  header { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+  h1 { font-size:16px; font-weight:600; }
+  .vivo { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; letter-spacing:.08em; color:#ef4444; }
+  .vivo::before { content:""; width:8px; height:8px; border-radius:50%; background:currentColor; animation:pisca 1.2s infinite; }
+  .vivo.off { color:var(--mut); } .vivo.off::before { animation:none; }
+  @keyframes pisca { 50% { opacity:.25; } }
+  #status { margin-left:auto; color:var(--mut); font-size:13px; font-variant-numeric:tabular-nums; }
+
+  .placar { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+  .atleta { background:var(--card); border:1px solid var(--line); border-left:6px solid var(--c); border-radius:12px;
+            padding:14px 18px; display:flex; align-items:center; justify-content:space-between; transition:background .3s; }
+  .atleta.pontuou { background:color-mix(in srgb, var(--c) 25%, var(--card)); }
+  .nome { font-size:20px; font-weight:700; }
+  .sub { font-size:12px; color:var(--mut); }
+  .pts { font-size:64px; font-weight:800; line-height:1; color:var(--c); font-variant-numeric:tabular-nums; }
+
+  .grade { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:12px; align-items:start; }
+  .video { position:relative; background:#000; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .video img { display:block; width:100%; height:auto; min-height:200px; max-height:calc(100vh - 190px); object-fit:contain; }
+  .toast { position:absolute; left:50%; top:16px; transform:translate(-50%,-20px); opacity:0; background:var(--c, var(--cor));
+           color:#000; font-weight:800; font-size:28px; padding:8px 20px; border-radius:10px; transition:.25s; pointer-events:none; }
+  .toast.on { opacity:1; transform:translate(-50%,0); }
+
+  aside { display:flex; flex-direction:column; gap:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .card h2 { font-size:12px; font-weight:600; color:var(--mut); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; }
+  .linha { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 0;
+           border-top:1px solid var(--line); font-variant-numeric:tabular-nums; }
+  .linha:first-child { border-top:0; }
+  .tag { font-size:12px; padding:2px 8px; border-radius:99px; background:var(--line); color:var(--mut); white-space:nowrap; }
+  .tag.cor { background:var(--cor); color:#000; } .tag.outro { background:var(--outro); color:#000; } .tag.duvida { background:#f97316; color:#000; }
+  ol { list-style:none; padding:0; max-height:260px; overflow:auto; }
+  .vazio { color:var(--mut); font-size:13px; }
+  .botoes { display:flex; gap:8px; }
+  button { flex:1; font:inherit; font-weight:600; padding:10px; border-radius:8px; border:1px solid var(--line);
+           background:#1b1f26; color:var(--txt); cursor:pointer; }
+  button:hover { background:#232833; }
+  button:focus-visible { outline:2px solid var(--cor); outline-offset:2px; }
+  .perigo { color:#f87171; }
+
+  @media (max-width:860px) { .grade { grid-template-columns:1fr; } .pts { font-size:44px; } }
+</style>
+</head>
+<body>
+<header>
+  <span class="vivo off" id="vivo">AO VIVO</span>
+  <h1>Placar JJ</h1>
+  <span id="status">conectando…</span>
+</header>
+
+<section class="placar">
+  <div class="atleta" id="a-cor" style="--c:var(--cor)">
+    <div><div class="nome" id="n-cor">–</div><div class="sub" id="s-cor">mão com faixa</div></div>
+    <div class="pts" id="p-cor">0</div>
+  </div>
+  <div class="atleta" id="a-outro" style="--c:var(--outro)">
+    <div><div class="nome" id="n-outro">–</div><div class="sub">mão sem faixa</div></div>
+    <div class="pts" id="p-outro">0</div>
+  </div>
+</section>
+
+<div class="grade">
+  <div class="video">
+    <img src="/video" alt="Câmera do juiz com as mãos detectadas">
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </div>
+  <aside>
+    <div class="card"><h2>Mãos do juiz</h2><div id="maos"></div></div>
+    <div class="card"><h2>Pontos marcados</h2><ol id="hist"></ol></div>
+    <div class="botoes">
+      <button id="desfazer">Desfazer último</button>
+      <button class="perigo" id="zerar">Zerar</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const mmss = t => `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+  let visto = null;
+
+  function flash(q, texto) {
+    const a = $("a-" + q), t = $("toast");
+    t.textContent = texto;
+    t.style.setProperty("--c", `var(--${q})`);
+    a.classList.add("pontuou"); t.classList.add("on");
+    setTimeout(() => { a.classList.remove("pontuou"); t.classList.remove("on"); }, 1500);
+  }
+
+  function render(e) {
+    document.documentElement.style.setProperty("--cor", e.css);
+    $("n-cor").textContent = e.nomes.cor;
+    $("n-outro").textContent = e.nomes.outro;
+    $("s-cor").textContent = `mão com faixa ${e.cor}`;
+    $("p-cor").textContent = e.pontos.cor;
+    $("p-outro").textContent = e.pontos.outro;
+    $("status").textContent = `${e.status} · ${Math.round(e.fps)} fps`;
+    $("vivo").classList.toggle("off", e.status !== "ao vivo");
+
+    const lado = n => n === e.nomes.cor ? "cor" : n === e.nomes.outro ? "outro" : "duvida";
+    $("maos").innerHTML = e.maos.length ? e.maos.map(m => `
+      <div class="linha">
+        <span>${m.dedos} dedos · faixa ${Math.round(m.faixa * 100)}%</span>
+        <span class="tag ${m.levantada ? lado(m.quem) : ""}">${m.levantada ? esc(m.quem ?? "faixa incerta") : "abaixada"}</span>
+      </div>`).join("") : '<p class="vazio">nenhuma mão na imagem</p>';
+
+    $("hist").innerHTML = e.historico.length ? e.historico.slice().reverse().map(([q, n, t]) => `
+      <li class="linha"><span>+${n} ${esc(e.nomes[q])}</span><span class="vazio">${mmss(t)}</span></li>`).join("")
+      : '<li class="vazio">nenhum ponto ainda</li>';
+
+    const h = e.historico.length;
+    if (visto !== null && h > visto) { const [q, n] = e.historico[h - 1]; flash(q, `+${n} ${e.nomes[q]}`); }
+    visto = h;
+  }
+
+  async function tick() {
+    try { render(await (await fetch("/estado")).json()); }
+    catch { $("status").textContent = "sem conexão"; $("vivo").classList.add("off"); }
+    setTimeout(tick, 250);
+  }
+
+  $("desfazer").onclick = () => fetch("/desfazer", { method: "POST" });
+  $("zerar").onclick = () => confirm("Zerar o placar?") && fetch("/zerar", { method: "POST" });
+  tick();
+</script>
+</body>
+</html>
