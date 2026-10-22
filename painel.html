@@ -5,134 +5,569 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Placar JJ</title>
 <style>
-  :root { --bg:#0b0d10; --card:#14171c; --line:#242932; --txt:#e8eaed; --mut:#8a93a3; --cor:#22c55e; --outro:#e5e7eb; }
+  :root { --bg:#0b0d10; --card:#14171c; --card2:#1b1f26; --line:#262b35; --txt:#e8eaed; --mut:#8a93a3;
+          --cor:#22c55e; --outro:#e5e7eb; --vant:#eab308; --pun:#ef4444; --ok:#22c55e; --raio:12px; }
   * { box-sizing:border-box; margin:0; }
   body { background:var(--bg); color:var(--txt); font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; padding:16px; min-height:100vh; }
-  header { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
-  h1 { font-size:16px; font-weight:600; }
+  [hidden] { display:none !important; }
+
+  header { display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+  h1 { font-size:16px; font-weight:700; }
   .vivo { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:700; letter-spacing:.08em; color:#ef4444; }
   .vivo::before { content:""; width:8px; height:8px; border-radius:50%; background:currentColor; animation:pisca 1.2s infinite; }
   .vivo.off { color:var(--mut); } .vivo.off::before { animation:none; }
   @keyframes pisca { 50% { opacity:.25; } }
+  .chip { font-size:12px; padding:3px 10px; border-radius:99px; background:var(--card2); border:1px solid var(--line); color:var(--mut);
+          max-width:40ch; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   #status { margin-left:auto; color:var(--mut); font-size:13px; font-variant-numeric:tabular-nums; }
 
-  .placar { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
-  .atleta { background:var(--card); border:1px solid var(--line); border-left:6px solid var(--c); border-radius:12px;
-            padding:14px 18px; display:flex; align-items:center; justify-content:space-between; transition:background .3s; }
-  .atleta.pontuou { background:color-mix(in srgb, var(--c) 25%, var(--card)); }
-  .nome { font-size:20px; font-weight:700; }
+  /* placar */
+  .placar { display:grid; grid-template-columns:1fr auto 1fr; gap:12px; margin-bottom:12px; }
+  .atleta { background:var(--card); border:1px solid var(--line); border-top:6px solid var(--c); border-radius:var(--raio);
+            padding:14px 18px; display:grid; grid-template-columns:1fr auto; gap:10px 16px; align-items:center; transition:background .3s; }
+  .atleta.pontuou { background:color-mix(in srgb, var(--c) 22%, var(--card)); }
+  .nome { font-size:22px; font-weight:800; overflow-wrap:anywhere; }
   .sub { font-size:12px; color:var(--mut); }
-  .pts { font-size:64px; font-weight:800; line-height:1; color:var(--c); font-variant-numeric:tabular-nums; }
+  .pts { font-size:72px; font-weight:900; line-height:.9; color:var(--c); font-variant-numeric:tabular-nums; text-align:right; }
+  .extras { display:flex; gap:8px; }
+  .extra { display:flex; align-items:baseline; gap:6px; font-size:13px; color:var(--mut); padding:4px 10px; border-radius:8px; background:var(--card2); }
+  .extra b { font-size:22px; color:var(--x); font-variant-numeric:tabular-nums; }
+  .manual { grid-column:1 / -1; display:flex; gap:6px; flex-wrap:wrap; }
+  .manual button { flex:1 1 0; min-width:44px; padding:7px 4px; font-size:14px; }
+  .manual .v { color:var(--vant); } .manual .p { color:var(--pun); }
 
-  .grade { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:12px; align-items:start; }
-  .video { position:relative; background:#000; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
-  .video img { display:block; width:100%; height:auto; min-height:200px; max-height:calc(100vh - 190px); object-fit:contain; }
-  .toast { position:absolute; left:50%; top:16px; transform:translate(-50%,-20px); opacity:0; background:var(--c, var(--cor));
-           color:#000; font-weight:800; font-size:28px; padding:8px 20px; border-radius:10px; transition:.25s; pointer-events:none; }
+  .relogio { background:var(--card); border:1px solid var(--line); border-radius:var(--raio); padding:14px 18px;
+             display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; min-width:220px; }
+  #tempo { font-size:56px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1; letter-spacing:.02em; }
+  .relogio.parado #tempo { color:var(--mut); }
+  .relogio.fim #tempo { color:var(--pun); animation:pisca 1s infinite; }
+  .relogio.final #tempo { color:var(--vant); }
+  .relogio .botoes { width:100%; }
+
+  /* vídeo + lateral */
+  .grade { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:12px; align-items:start; }
+  .video { position:relative; background:#000; border:1px solid var(--line); border-radius:var(--raio); overflow:hidden; min-height:240px; }
+  .video img { cursor:crosshair; display:block; width:100%; height:auto; max-height:calc(100vh - 250px); object-fit:contain; }
+  .vazio-video { position:absolute; inset:0; display:grid; place-content:center; text-align:center; gap:6px; color:var(--mut); padding:24px; }
+  .vazio-video b { color:var(--txt); font-size:18px; }
+  .toast { position:absolute; left:50%; top:16px; transform:translate(-50%,-20px); opacity:0; background:var(--c, var(--cor)); max-width:90%;
+           color:#000; font-weight:800; font-size:26px; padding:8px 20px; border-radius:10px; transition:.25s; pointer-events:none; text-align:center; }
+  .toast.erro { font-size:15px; font-weight:600; background:#7f1d1d; color:#fff; }
   .toast.on { opacity:1; transform:translate(-50%,0); }
 
   aside { display:flex; flex-direction:column; gap:12px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
-  .card h2 { font-size:12px; font-weight:600; color:var(--mut); text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:var(--raio); padding:14px; }
+  .card h2, summary { font-size:12px; font-weight:700; color:var(--mut); text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px; }
+  summary { cursor:pointer; margin:0; list-style-position:inside; }
+  details[open] summary { margin-bottom:10px; }
   .linha { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 0;
            border-top:1px solid var(--line); font-variant-numeric:tabular-nums; }
   .linha:first-child { border-top:0; }
   .tag { font-size:12px; padding:2px 8px; border-radius:99px; background:var(--line); color:var(--mut); white-space:nowrap; }
   .tag.cor { background:var(--cor); color:#000; } .tag.outro { background:var(--outro); color:#000; } .tag.duvida { background:#f97316; color:#000; }
-  ol { list-style:none; padding:0; max-height:260px; overflow:auto; }
-  .vazio { color:var(--mut); font-size:13px; }
-  .botoes { display:flex; gap:8px; }
-  button { flex:1; font:inherit; font-weight:600; padding:10px; border-radius:8px; border:1px solid var(--line);
-           background:#1b1f26; color:var(--txt); cursor:pointer; }
-  button:hover { background:#232833; }
-  button:focus-visible { outline:2px solid var(--cor); outline-offset:2px; }
-  .perigo { color:#f87171; }
+  ol { list-style:none; padding:0; max-height:240px; overflow:auto; margin-bottom:10px; }
+  .vazio, .dica { color:var(--mut); font-size:13px; }
+  .dica { margin-top:8px; } .dica code { color:var(--txt); }
+  .bola { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--b); margin-right:6px; }
 
-  @media (max-width:860px) { .grade { grid-template-columns:1fr; } .pts { font-size:44px; } }
+  .botoes { display:flex; gap:8px; }
+  button, input, select { font:inherit; color:var(--txt); }
+  button { flex:1; font-weight:600; padding:9px 10px; border-radius:8px; border:1px solid var(--line); background:var(--card2); cursor:pointer; }
+  button:hover:not(:disabled) { background:#232833; }
+  button:disabled { opacity:.5; cursor:default; }
+  button.primario { background:var(--cor); border-color:var(--cor); color:#000; }
+  button.primario:hover:not(:disabled) { background:color-mix(in srgb, var(--cor) 85%, #fff); }
+  :is(button, input, select, summary):focus-visible { outline:2px solid var(--cor); outline-offset:2px; }
+  .perigo { color:#f87171; }
+  input[type=text], input[type=url], select { width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); }
+  input[type=range] { width:100%; accent-color:var(--cor); }
+  .campo { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; font-size:13px; color:var(--mut); }
+  .campo span { display:flex; justify-content:space-between; }
+  .campo output { color:var(--txt); font-variant-numeric:tabular-nums; }
+  .check { display:flex; align-items:center; gap:8px; font-size:13px; margin-bottom:4px; cursor:pointer; }
+  .check input { accent-color:var(--cor); width:16px; height:16px; }
+  #so-mao, #so-faixa { margin-bottom:12px; } #calibrar { width:100%; margin-bottom:4px; }
+  .par { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+
+  /* seletor de fonte */
+  .abas { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; padding:4px; background:var(--bg); border-radius:10px; margin-bottom:12px; }
+  .abas button { border:0; background:transparent; padding:8px 4px; font-size:13px; color:var(--mut); }
+  .abas button[aria-selected=true] { background:var(--card2); color:var(--txt); box-shadow:inset 0 0 0 1px var(--line); }
+  .aba { display:flex; flex-direction:column; gap:8px; }
+  .msg { font-size:13px; margin-top:8px; min-height:1.4em; color:var(--mut); }
+  .msg.erro { color:#f87171; } .msg.ok { color:var(--ok); }
+  .arquivo { position:relative; }
+  .arquivo input { position:absolute; inset:0; opacity:0; cursor:pointer; }
+  progress { width:100%; accent-color:var(--cor); }
+
+  @media (max-width:1000px) { .grade { grid-template-columns:1fr; } }
+  @media (max-width:760px) {
+    .placar { grid-template-columns:1fr 1fr; } .relogio { grid-column:1 / -1; grid-row:1; }
+    .pts { font-size:48px; } .nome { font-size:18px; } .atleta { padding:12px; }
+  }
 </style>
 </head>
 <body>
 <header>
   <span class="vivo off" id="vivo">AO VIVO</span>
   <h1>Placar JJ</h1>
+  <span class="chip" id="chip-fonte">sem fonte</span>
   <span id="status">conectando…</span>
 </header>
 
 <section class="placar">
   <div class="atleta" id="a-cor" style="--c:var(--cor)">
-    <div><div class="nome" id="n-cor">–</div><div class="sub" id="s-cor">mão com faixa</div></div>
+    <div><div class="nome" id="n-cor">–</div><div class="sub" id="s-cor">mão direita do juiz</div></div>
     <div class="pts" id="p-cor">0</div>
+    <div class="extras">
+      <span class="extra" style="--x:var(--vant)">Vantagens <b id="v-cor">0</b></span>
+      <span class="extra" style="--x:var(--pun)">Punições <b id="u-cor">0</b></span>
+    </div>
+    <div class="manual" data-quem="cor"></div>
   </div>
+
+  <div class="relogio parado" id="relogio">
+    <div id="tempo">05:00</div>
+    <div class="botoes">
+      <button id="rel-alternar" title="Espaço">Iniciar</button>
+      <button id="rel-reiniciar" title="Reinicia com a duração escolhida">↺</button>
+    </div>
+    <select id="rel-duracao" aria-label="Duração da luta">
+      <option value="240">4 min</option><option value="300" selected>5 min</option><option value="360">6 min</option>
+      <option value="420">7 min</option><option value="480">8 min</option><option value="600">10 min</option>
+    </select>
+  </div>
+
   <div class="atleta" id="a-outro" style="--c:var(--outro)">
-    <div><div class="nome" id="n-outro">–</div><div class="sub">mão sem faixa</div></div>
+    <div><div class="nome" id="n-outro">–</div><div class="sub" id="s-outro">mão esquerda do juiz</div></div>
     <div class="pts" id="p-outro">0</div>
+    <div class="extras">
+      <span class="extra" style="--x:var(--vant)">Vantagens <b id="v-outro">0</b></span>
+      <span class="extra" style="--x:var(--pun)">Punições <b id="u-outro">0</b></span>
+    </div>
+    <div class="manual" data-quem="outro"></div>
   </div>
 </section>
 
 <div class="grade">
   <div class="video">
-    <img src="/video" alt="Câmera do juiz com as mãos detectadas">
+    <img id="stream" src="/video" alt="Câmera do juiz com as mãos detectadas">
+    <div class="vazio-video" id="vazio-video"><b>Nenhuma fonte de vídeo</b><span>Escolha vídeo, câmera do PC ou câmera IP no painel ao lado.</span></div>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </div>
+
   <aside>
-    <div class="card"><h2>Mãos do juiz</h2><div id="maos"></div></div>
-    <div class="card"><h2>Pontos marcados</h2><ol id="hist"></ol></div>
-    <div class="botoes">
-      <button id="desfazer">Desfazer último</button>
-      <button class="perigo" id="zerar">Zerar</button>
+    <div class="card">
+      <h2>Fonte de vídeo</h2>
+      <div class="abas" role="tablist">
+        <button role="tab" data-aba="video" aria-selected="true">Vídeo</button>
+        <button role="tab" data-aba="camera" aria-selected="false">Câmera do PC</button>
+        <button role="tab" data-aba="ip" aria-selected="false">Câmera IP</button>
+      </div>
+
+      <div class="aba" id="aba-video">
+        <select id="lista-videos" aria-label="Vídeos disponíveis"></select>
+        <div class="botoes">
+          <button class="primario" id="tocar">Tocar</button>
+          <button class="arquivo">Enviar vídeo…<input type="file" id="enviar" accept="video/*"></button>
+        </div>
+        <progress id="progresso" max="1" value="0" hidden></progress>
+      </div>
+
+      <div class="aba" id="aba-camera" hidden>
+        <select id="lista-cameras" aria-label="Câmeras deste PC"><option value="">câmera padrão</option></select>
+        <div class="botoes">
+          <button class="primario" id="ligar-cam">Usar esta câmera</button>
+          <button id="parar-cam" disabled>Parar</button>
+        </div>
+        <p class="dica">A câmera é lida pelo navegador e enviada pro servidor, então funciona mesmo no Docker/WSL.
+          Só abre em <code>http://localhost</code> (ou https). Deixe esta aba aberta.</p>
+      </div>
+
+      <div class="aba" id="aba-ip" hidden>
+        <input type="url" id="url-ip" placeholder="http://192.168.0.50:8080/video" autocomplete="off" spellcheck="false">
+        <button class="primario" id="conectar-ip">Conectar</button>
+        <p class="dica">Android: app <b>IP Webcam</b> → <code>http://IP:8080/video</code>.
+          iPhone: <b>DroidCam</b> → <code>http://IP:4747/video</code>. Também aceita <code>rtsp://…</code>. Mesma rede Wi-Fi.</p>
+      </div>
+      <p class="msg" id="msg-fonte" aria-live="polite"></p>
     </div>
+
+    <div class="card">
+      <h2>Juiz</h2>
+      <div class="linha juiz"><span id="juiz-status">–</span><span class="tag" id="juiz-tag">–</span></div>
+      <div class="botoes">
+        <button id="travar-juiz">Travar juiz</button>
+        <button id="soltar-juiz">Soltar</button>
+      </div>
+      <p class="dica">Só valem as mãos do juiz (caixa roxa). Solto, o juiz é a maior pessoa da imagem; com mais gente,
+        <b>clique no juiz no vídeo</b> pra travar nele.</p>
+      <h2 style="margin-top:14px">Mãos do juiz</h2><div id="maos"></div>
+    </div>
+
+    <div class="card">
+      <h2>Histórico</h2>
+      <ol id="hist"></ol>
+      <div class="botoes">
+        <button id="desfazer" title="Ctrl+Z">Desfazer último</button>
+        <button class="perigo" id="zerar">Zerar luta</button>
+      </div>
+    </div>
+
+    <details class="card" id="ajustes">
+      <summary>Ajustes</summary>
+      <div class="par">
+        <label class="campo">Atleta com faixa<input type="text" id="cfg-nome-cor" maxlength="24"></label>
+        <label class="campo">Outro atleta<input type="text" id="cfg-nome-outro" maxlength="24"></label>
+      </div>
+      <label class="campo">Identificar o atleta pela
+        <select id="cfg-modo">
+          <option value="mao">mão do juiz (direita = faixa verde-amarela)</option>
+          <option value="faixa">cor da faixa no pulso do juiz</option>
+        </select></label>
+      <div id="so-mao">
+        <label class="check"><input type="checkbox" id="cfg-inverter"> Inverter esquerda/direita</label>
+        <p class="dica">Levante a mão direita: em “Mãos do juiz” tem que aparecer “direita”. Se aparecer “esquerda”, marque inverter.</p>
+      </div>
+      <div id="so-faixa">
+        <label class="campo">Cor da faixa no pulso<select id="cfg-cor"></select></label>
+        <button id="calibrar">Calibrar faixa</button>
+        <p class="dica">Com a faixa no pulso, levante a mão até o círculo ficar em cima dela e clique: o painel aprende a cor
+          (e evita a cor da pele).</p>
+        <p class="msg" id="msg-calibrar" aria-live="polite"></p>
+        <label class="campo"><span>Cor mínima no pulso <output id="o-min_frac"></output></span>
+          <input type="range" id="cfg-min_frac" min="0.01" max="0.9" step="0.01"></label>
+      <label class="campo"><span>Análises por segundo <output id="o-fps"></output></span>
+        <input type="range" id="cfg-fps" min="5" max="60" step="1"></label>
+      <p class="dica" style="margin:-4px 0 10px">15 já basta (o gesto dura 0.5 s). Se o “fps” do topo ficar abaixo do escolhido,
+        a máquina não aguenta: baixe. Câmera de 30 fps não passa de 30.</p>
+      <label class="campo"><span>Segurar gesto <output id="o-segurar"></output></span>
+        <input type="range" id="cfg-segurar" min="0.1" max="3" step="0.1"></label>
+      <label class="campo"><span>Abaixar antes do próximo <output id="o-soltar"></output></span>
+        <input type="range" id="cfg-soltar" min="0.1" max="3" step="0.1"></label>
+        <p class="dica">Cor mínima: uns 2/3 do “faixa %” que aparece em “Mãos do juiz” com a faixa visível.</p>
+      </div>
+    </details>
   </aside>
 </div>
+
+<video id="cam-video" muted playsinline hidden></video>
 
 <script>
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const mmss = t => `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
-  let visto = null;
+  const hora = s => new Date(s * 1000).toLocaleTimeString("pt-BR");
+  const espera = ms => new Promise(r => setTimeout(r, ms));
+  const NOME_TIPO = { pontos: "", vantagens: "vantagem", punicoes: "punição" };
+  let e = null, visto = null, cfgVisto = "", relogioAntes = null;
 
-  function flash(q, texto) {
-    const a = $("a-" + q), t = $("toast");
-    t.textContent = texto;
-    t.style.setProperty("--c", `var(--${q})`);
-    a.classList.add("pontuou"); t.classList.add("on");
-    setTimeout(() => { a.classList.remove("pontuou"); t.classList.remove("on"); }, 1500);
+  async function post(url, dados) {
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(dados ?? {}) });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).erro || `erro ${r.status}`);
+    return r.status === 204 ? null : r.json();
   }
 
-  function render(e) {
-    document.documentElement.style.setProperty("--cor", e.css);
-    $("n-cor").textContent = e.nomes.cor;
-    $("n-outro").textContent = e.nomes.outro;
-    $("s-cor").textContent = `mão com faixa ${e.cor}`;
-    $("p-cor").textContent = e.pontos.cor;
-    $("p-outro").textContent = e.pontos.outro;
-    $("status").textContent = `${e.status} · ${Math.round(e.fps)} fps`;
-    $("vivo").classList.toggle("off", e.status !== "ao vivo");
+  function aviso(texto, tipo = "") { const m = $("msg-fonte"); m.textContent = texto; m.className = "msg " + tipo; }
 
-    const lado = n => n === e.nomes.cor ? "cor" : n === e.nomes.outro ? "outro" : "duvida";
-    $("maos").innerHTML = e.maos.length ? e.maos.map(m => `
-      <div class="linha">
-        <span>${m.dedos} dedos · faixa ${Math.round(m.faixa * 100)}%</span>
-        <span class="tag ${m.levantada ? lado(m.quem) : ""}">${m.levantada ? esc(m.quem ?? "faixa incerta") : "abaixada"}</span>
-      </div>`).join("") : '<p class="vazio">nenhuma mão na imagem</p>';
+  let toastTimer;
+  function toast(texto, q) {
+    const t = $("toast");
+    t.textContent = texto;
+    t.classList.toggle("erro", !q);
+    if (q) t.style.setProperty("--c", `var(--${q})`);
+    t.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("on"), q ? 1500 : 3500);
+    if (q) { const a = $("a-" + q); a.classList.add("pontuou"); setTimeout(() => a.classList.remove("pontuou"), 1500); }
+  }
+  const tentar = fn => async (...args) => { try { await fn(...args); } catch (err) { toast(err.message); } };
 
-    $("hist").innerHTML = e.historico.length ? e.historico.slice().reverse().map(([q, n, t]) => `
-      <li class="linha"><span>+${n} ${esc(e.nomes[q])}</span><span class="vazio">${mmss(t)}</span></li>`).join("")
+  // ---------- placar
+  for (const div of document.querySelectorAll(".manual")) {
+    const quem = div.dataset.quem;
+    div.innerHTML = [
+      [2, "pontos", "+2", "Queda, raspagem, joelho na barriga"], [3, "pontos", "+3", "Passagem de guarda"],
+      [4, "pontos", "+4", "Montada ou pegada nas costas"], [1, "vantagens", "V", "Vantagem"], [1, "punicoes", "P", "Punição"],
+    ].map(([n, tipo, rot, dica]) => `<button data-n="${n}" data-tipo="${tipo}" title="${dica}"
+        class="${tipo === "vantagens" ? "v" : tipo === "punicoes" ? "p" : ""}">${rot}</button>`).join("");
+    div.onclick = tentar(async ev => {
+      const b = ev.target.closest("button");
+      if (b) await post("/marcar", { quem, tipo: b.dataset.tipo, n: +b.dataset.n });
+    });
+  }
+
+  function render() {
+    const { cfg } = e, nomes = cfg.nomes;
+    document.documentElement.style.setProperty("--cor", cfg.css);
+    for (const q of ["cor", "outro"]) {
+      $("n-" + q).textContent = nomes[q];
+      $("p-" + q).textContent = e.pontos[q];
+      $("v-" + q).textContent = e.vantagens[q];
+      $("u-" + q).textContent = e.punicoes[q];
+    }
+    const porMao = cfg.modo === "mao";
+    $("s-cor").textContent = porMao ? "mão direita do juiz" : `mão com faixa ${cfg.cor}`;
+    $("s-outro").textContent = porMao ? "mão esquerda do juiz" : "mão sem faixa";
+
+    const rodando = e.status === "ao vivo" || e.status === "reproduzindo";
+    $("status").textContent = rodando ? `${e.status} · ${Math.round(e.fps)} fps` : e.status;
+    $("vivo").classList.toggle("off", !rodando);
+    $("vazio-video").hidden = !!e.fonte;
+    $("chip-fonte").textContent = !e.fonte ? "sem fonte"
+      : e.fonte.tipo === "video" ? `Vídeo · ${e.fonte.nome}` : e.fonte.tipo === "camera" ? "Câmera do PC" : `IP · ${e.fonte.nome}`;
+    if (cam.ativo && e.fonte?.tipo !== "camera") pararCamera();
+
+    const j = e.juiz;
+    $("juiz-status").textContent = !e.fonte ? "sem vídeo" : !j.pessoas ? "ninguém na imagem"
+      : j.visivel ? `${j.pessoas} pessoa${j.pessoas > 1 ? "s" : ""} na imagem` : "juiz fora da imagem";
+    $("juiz-tag").textContent = j.travado ? "travado" : "automático";
+    $("juiz-tag").className = "tag" + (j.travado ? " cor" : "");
+    $("soltar-juiz").disabled = !j.travado;
+
+    $("maos").innerHTML = e.maos.length ? e.maos.map(m => {
+      const lado = m.quem ?? "duvida", nome = m.quem ? nomes[m.quem] : porMao ? "mão incerta" : "faixa incerta";
+      const sinal = m.sinal && (m.sinal[0] === "pontos" ? `+${m.sinal[1]}` : NOME_TIPO[m.sinal[0]]);
+      const info = porMao ? `${m.lado ?? "?"} · ${m.dedos} dedos` : `${m.dedos} dedos · faixa ${Math.round(m.faixa * 100)}%`;
+      return `<div class="linha"><span>${info}</span>
+        <span class="tag ${m.sinal ? lado : ""}">${m.sinal ? `${sinal} ${esc(nome)}` : "sem sinal"}</span></div>`;
+    }).join("") : '<p class="vazio">nenhuma mão na imagem</p>';
+
+    $("hist").innerHTML = e.historico.length ? e.historico.slice().reverse().map(([q, tipo, n, t, origem]) => `
+      <li class="linha"><span><span class="bola" style="--b:var(--${q})"></span>${n > 0 ? "+" : ""}${n} ${NOME_TIPO[tipo]} ${esc(nomes[q])}</span>
+      <span class="vazio">${origem === "manual" ? "manual · " : ""}${hora(t)}</span></li>`).join("")
       : '<li class="vazio">nenhum ponto ainda</li>';
 
     const h = e.historico.length;
-    if (visto !== null && h > visto) { const [q, n] = e.historico[h - 1]; flash(q, `+${n} ${e.nomes[q]}`); }
+    if (visto !== null && h > visto) {
+      const [q, tipo, n] = e.historico[h - 1];
+      toast(`${n > 0 ? "+" : ""}${n} ${NOME_TIPO[tipo]} ${nomes[q]}`, q);
+    }
     visto = h;
+
+    renderRelogio(e.relogio);
+    renderCfg(cfg);
   }
 
+  // ---------- cronômetro
+  function renderRelogio(r) {
+    const el = $("relogio");
+    $("tempo").textContent = mmss(Math.ceil(r.restante));
+    $("rel-alternar").textContent = r.rodando ? "Pausar" : r.restante < r.duracao ? "Continuar" : "Iniciar";
+    $("rel-alternar").disabled = r.restante <= 0;
+    el.classList.toggle("parado", !r.rodando && r.restante > 0);
+    el.classList.toggle("fim", r.restante <= 0);
+    el.classList.toggle("final", r.rodando && r.restante <= 30);
+    if (document.activeElement !== $("rel-duracao")) $("rel-duracao").value = String(r.duracao);
+    if (relogioAntes?.rodando && r.restante <= 0) apito();
+    relogioAntes = r;
+  }
+  function apito() {
+    try {
+      const ctx = new AudioContext(), o = ctx.createOscillator(), g = ctx.createGain();
+      o.frequency.value = 880; g.gain.value = 0.2; o.connect(g).connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + 1.2);
+    } catch {}
+  }
+  $("rel-alternar").onclick = tentar(() => post("/cronometro", { acao: "alternar" }));
+  $("rel-reiniciar").onclick = tentar(() => post("/cronometro", { acao: "reiniciar", duracao: +$("rel-duracao").value }));
+  $("rel-duracao").onchange = $("rel-reiniciar").onclick;
+
+  // ---------- ajustes
+  const SLIDERS = { fps: v => `${v} fps`, min_frac: v => `${Math.round(v * 100)}%`, segurar: v => `${(+v).toFixed(1)} s`, soltar: v => `${(+v).toFixed(1)} s` };
+  function renderCfg(cfg) {
+    const chave = JSON.stringify([cfg, Object.keys(e.cores)]);
+    if (chave === cfgVisto) return;
+    cfgVisto = chave;
+    const sel = $("cfg-cor");
+    if (sel.options.length !== Object.keys(e.cores).length)
+      sel.innerHTML = Object.keys(e.cores).map(c => `<option value="${c}">${c}</option>`).join("");
+    const preencher = (id, v) => { if (document.activeElement !== $(id)) $(id).value = v; };
+    preencher("cfg-cor", cfg.cor);
+    preencher("cfg-modo", cfg.modo);
+    $("cfg-inverter").checked = cfg.inverter;
+    $("so-mao").hidden = cfg.modo !== "mao";
+    $("so-faixa").hidden = cfg.modo !== "faixa";
+    preencher("cfg-nome-cor", cfg.nomes.cor);
+    preencher("cfg-nome-outro", cfg.nomes.outro);
+    for (const k in SLIDERS) { preencher("cfg-" + k, cfg[k]); $("o-" + k).textContent = SLIDERS[k]($("cfg-" + k).value); }
+  }
+  let cfgTimer;
+  const salvarCfg = dados => { clearTimeout(cfgTimer); cfgTimer = setTimeout(tentar(() => post("/config", dados)), 150); };
+  $("cfg-cor").onchange = () => salvarCfg({ cor: $("cfg-cor").value });
+  $("cfg-modo").onchange = () => salvarCfg({ modo: $("cfg-modo").value });
+  $("cfg-inverter").onchange = () => salvarCfg({ inverter: $("cfg-inverter").checked });
+  $("calibrar").onclick = async () => {
+    const m = $("msg-calibrar");
+    try {
+      const r = await post("/calibrar");
+      m.className = "msg ok";
+      m.textContent = `Cor aprendida: ${Math.round(r.cobertura * 100)}% do pulso` + (r.pele > 0.01 ? ` · bate em ${Math.round(r.pele * 100)}% da pele` : "");
+    } catch (err) { m.className = "msg erro"; m.textContent = err.message; }
+  };
+  for (const id of ["cfg-nome-cor", "cfg-nome-outro"])
+    $(id).onchange = () => salvarCfg({ nomes: { cor: $("cfg-nome-cor").value, outro: $("cfg-nome-outro").value } });
+  for (const k in SLIDERS) $("cfg-" + k).oninput = ev => { $("o-" + k).textContent = SLIDERS[k](ev.target.value); salvarCfg({ [k]: +ev.target.value }); };
+
+  // ---------- fonte: abas
+  for (const b of document.querySelectorAll("[data-aba]")) b.onclick = () => abrirAba(b.dataset.aba);
+  function abrirAba(nome) {
+    for (const b of document.querySelectorAll("[data-aba]")) b.setAttribute("aria-selected", b.dataset.aba === nome);
+    for (const a of ["video", "camera", "ip"]) $("aba-" + a).hidden = a !== nome;
+    aviso("");
+    if (nome === "video") carregarVideos();
+  }
+
+  // ---------- fonte: vídeo
+  async function carregarVideos(escolher) {
+    const lista = await (await fetch("/videos")).json(), sel = $("lista-videos"), atual = escolher || sel.value || e?.fonte?.nome;
+    sel.innerHTML = lista.length ? lista.map(v => `<option>${esc(v)}</option>`).join("") : '<option value="">nenhum vídeo na pasta</option>';
+    if (lista.includes(atual)) sel.value = atual;
+    $("tocar").disabled = !lista.length;
+  }
+  $("tocar").onclick = async () => {
+    try { aviso("abrindo…"); await post("/fonte", { tipo: "video", nome: $("lista-videos").value }); aviso("tocando " + $("lista-videos").value, "ok"); }
+    catch (err) { aviso(err.message, "erro"); }
+  };
+  $("enviar").onchange = ev => {
+    const arq = ev.target.files[0];
+    ev.target.value = "";
+    if (!arq) return;
+    const xhr = new XMLHttpRequest(), barra = $("progresso");
+    barra.hidden = false; barra.value = 0;
+    aviso(`enviando ${arq.name}…`);
+    xhr.upload.onprogress = p => { if (p.lengthComputable) barra.value = p.loaded / p.total; };
+    xhr.onloadend = async () => {
+      barra.hidden = true;
+      let r = {}; try { r = JSON.parse(xhr.responseText); } catch {}
+      if (xhr.status !== 200) return aviso(r.erro || "falha no envio", "erro");
+      await carregarVideos(r.nome);
+      $("tocar").click();
+    };
+    xhr.open("POST", "/enviar?nome=" + encodeURIComponent(arq.name));
+    xhr.send(arq);
+  };
+
+  // ---------- fonte: câmera do PC (navegador captura, servidor processa)
+  const cam = { stream: null, ativo: false };
+  async function listarCameras() {
+    const sel = $("lista-cameras"), atual = sel.value;
+    const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === "videoinput" && d.deviceId);
+    if (!devs.length) return;
+    sel.innerHTML = devs.map((d, i) => `<option value="${esc(d.deviceId)}">${esc(d.label || "Câmera " + (i + 1))}</option>`).join("");
+    if (devs.some(d => d.deviceId === atual)) sel.value = atual;
+  }
+  async function ligarCamera() {
+    if (!navigator.mediaDevices?.getUserMedia)
+      throw new Error("O navegador só libera a câmera em http://localhost ou https. Abra o painel no PC da câmera via localhost.");
+    pararCamera();
+    aviso("pedindo acesso à câmera…");
+    const id = $("lista-cameras").value;
+    try {
+      cam.stream = await navigator.mediaDevices.getUserMedia({ audio: false,
+        video: { deviceId: id ? { exact: id } : undefined, width: { ideal: 1280 }, height: { ideal: 720 } } });
+    } catch (err) {
+      throw new Error(err.name === "NotAllowedError" ? "Permissão da câmera negada (libere no cadeado da barra de endereço)."
+        : err.name === "NotFoundError" ? "Nenhuma câmera encontrada neste PC." : err.name === "NotReadableError"
+        ? "A câmera está em uso por outro programa." : err.message);
+    }
+    const v = $("cam-video");
+    v.srcObject = cam.stream;
+    await v.play();
+    await listarCameras();
+    const trilha = cam.stream.getVideoTracks()[0];
+    $("lista-cameras").value = trilha.getSettings().deviceId ?? $("lista-cameras").value;
+    trilha.onended = () => { pararCamera(); aviso("a câmera foi desconectada", "erro"); };
+    await post("/fonte", { tipo: "camera" });
+    cam.ativo = true;
+    $("parar-cam").disabled = false;
+    aviso(`usando ${trilha.label || "câmera"}`, "ok");
+    enviarQuadros(v);
+  }
+  function pararCamera() {
+    cam.ativo = false;
+    cam.stream?.getTracks().forEach(t => t.stop());
+    cam.stream = null;
+    $("parar-cam").disabled = true;
+  }
+  async function enviarQuadros(v) {
+    const c = document.createElement("canvas"), ctx = c.getContext("2d");
+    while (cam.ativo) {
+      const t0 = performance.now();
+      if (v.videoWidth) {
+        const k = Math.min(1, 1280 / v.videoWidth);
+        c.width = Math.round(v.videoWidth * k); c.height = Math.round(v.videoHeight * k);
+        ctx.drawImage(v, 0, 0, c.width, c.height);
+        const jpg = await new Promise(r => c.toBlob(r, "image/jpeg", 0.85));
+        try {
+          const r = await fetch("/quadro", { method: "POST", body: jpg });
+          if (r.status === 409) { pararCamera(); break; }  // outra fonte foi escolhida
+        } catch { await espera(500); }
+      }
+      // manda no ritmo das análises (até 30 fps); o servidor dita o ritmo de verdade
+      await espera(Math.max(0, 1000 / Math.min(e?.cfg.fps ?? 15, 30) - (performance.now() - t0)));
+    }
+  }
+  $("ligar-cam").onclick = async () => { try { await ligarCamera(); } catch (err) { pararCamera(); aviso(err.message, "erro"); } };
+  $("parar-cam").onclick = () => { pararCamera(); aviso("câmera parada"); };
+  $("lista-cameras").onchange = () => cam.ativo && $("ligar-cam").click();
+
+  // ---------- fonte: câmera IP
+  $("conectar-ip").onclick = async () => {
+    const url = $("url-ip").value.trim(), b = $("conectar-ip");
+    if (!url) return aviso("cole o link da câmera", "erro");
+    b.disabled = true; aviso("conectando… (até 5 s)");
+    try { await post("/fonte", { tipo: "ip", url }); aviso("conectado", "ok"); try { localStorage.ultimaIp = url; } catch {} }
+    catch (err) { aviso(err.message, "erro"); }
+    finally { b.disabled = false; }
+  };
+  $("url-ip").onkeydown = ev => ev.key === "Enter" && $("conectar-ip").click();
+  try { $("url-ip").value = localStorage.ultimaIp || ""; } catch {}
+
+  // ---------- juiz
+  $("travar-juiz").onclick = tentar(() => post("/juiz", { acao: "travar" }));
+  $("soltar-juiz").onclick = tentar(() => post("/juiz", { acao: "soltar" }));
+  // clique no vídeo: converte pra 0..1 da imagem descontando as faixas pretas do object-fit:contain
+  $("stream").onclick = tentar(async ev => {
+    const img = ev.currentTarget, r = img.getBoundingClientRect();
+    if (!img.naturalWidth) return;
+    const k = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
+    const x = (ev.clientX - r.left - (r.width - img.naturalWidth * k) / 2) / (img.naturalWidth * k);
+    const y = (ev.clientY - r.top - (r.height - img.naturalHeight * k) / 2) / (img.naturalHeight * k);
+    if (x < 0 || x > 1 || y < 0 || y > 1) return;
+    await post("/juiz", { acao: "travar", x, y });
+    toast("Juiz travado", "cor");
+  });
+
+  // ---------- ações
+  $("desfazer").onclick = tentar(() => post("/desfazer"));
+  $("zerar").onclick = tentar(() => confirm("Zerar placar e cronômetro?") && post("/zerar"));
+  document.addEventListener("keydown", ev => {
+    if (ev.target.closest("input, select, textarea")) return;
+    if (ev.code === "Space" && !ev.target.closest("button")) { ev.preventDefault(); $("rel-alternar").click(); }
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === "z") { ev.preventDefault(); $("desfazer").click(); }
+  });
+
+  // o <img> do MJPEG morre se o servidor reiniciar; recarrega quando a conexão volta
+  let caiu = false;
   async function tick() {
-    try { render(await (await fetch("/estado")).json()); }
-    catch { $("status").textContent = "sem conexão"; $("vivo").classList.add("off"); }
+    try {
+      e = await (await fetch("/estado")).json();
+      if (caiu) { $("stream").src = "/video?" + Date.now(); caiu = false; }
+      render();
+    } catch {
+      caiu = true;
+      $("status").textContent = "sem conexão com o servidor";
+      $("vivo").classList.add("off");
+    }
     setTimeout(tick, 250);
   }
-
-  $("desfazer").onclick = () => fetch("/desfazer", { method: "POST" });
-  $("zerar").onclick = () => confirm("Zerar o placar?") && fetch("/zerar", { method: "POST" });
-  tick();
+  (async () => {
+    await tick();
+    const aba = e?.fonte?.tipo ?? "video";
+    abrirAba(aba);
+    if (aba === "ip") $("url-ip").value = e.fonte.nome;
+  })();
 </script>
 </body>
 </html>
