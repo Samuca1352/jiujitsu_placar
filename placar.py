@@ -12,8 +12,10 @@ com as caixas, placar com vantagens/punições, cronômetro, ajustes ao vivo, de
 import argparse
 import json
 import re
+import sys
 import threading
 import time
+import webbrowser
 from functools import cached_property
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -48,6 +50,8 @@ TIPOS = ("pontos", "vantagens", "punicoes")
 ROTULO = {"pontos": "+{}", "vantagens": "VANTAGEM", "punicoes": "PUNICAO"}  # putText do OpenCV não tem acento
 LIMITES = {"min_frac": (0.01, 0.9), "segurar": (0.1, 3.0), "soltar": (0.1, 3.0), "fps": (5, 60)}
 VIDEO_EXT = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v"}
+# pasta do painel e dos modelos: ao lado do placar.py, ou a pasta temporária do executável (PyInstaller)
+BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 ESQUEMAS_IP = ("rtsp://", "rtsps://", "http://", "https://", "rtmp://")
 
 
@@ -599,9 +603,9 @@ def processar(est, saida=None, painel=True):
     e a CPU cai pela metade com câmera de 30 fps. Muda ao vivo pelo painel."""
     placar = est.placar
     det_mao = HandLandmarker.create_from_options(HandLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path="hand_landmarker.task"), running_mode=RunningMode.VIDEO, num_hands=4))
+        base_options=BaseOptions(model_asset_path=str(BASE / "hand_landmarker.task")), running_mode=RunningMode.VIDEO, num_hands=4))
     det_pose = PoseLandmarker.create_from_options(PoseLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path="pose_landmarker_lite.task"), running_mode=RunningMode.VIDEO, num_poses=4))
+        base_options=BaseOptions(model_asset_path=str(BASE / "pose_landmarker_lite.task")), running_mode=RunningMode.VIDEO, num_poses=4))
     fonte, gravador, ts, dt, antes, n, corpos, t_ultimo = None, None, 0, 1.0, time.monotonic(), 0, [], 0.0
 
     while True:
@@ -703,7 +707,7 @@ MAX_VIDEO = 4 << 30
 
 
 def servir(est, porta):
-    pagina = Path(__file__).with_name("painel.html").read_bytes()
+    pagina = (BASE / "painel.html").read_bytes()
 
     class Painel(BaseHTTPRequestHandler):
         def log_message(self, *_):
@@ -870,6 +874,8 @@ def main():
     if not a.porta:
         return processar(est, a.saida, painel=False)
     threading.Thread(target=processar, args=(est, a.saida), daemon=True).start()
+    if getattr(sys, "frozen", False):  # executável: abre o painel sozinho
+        threading.Timer(1.5, webbrowser.open, [f"http://localhost:{a.porta}"]).start()
     servir(est, a.porta)
 
 
