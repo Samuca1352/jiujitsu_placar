@@ -1,5 +1,72 @@
 # Placar JJ por gesto
 
+O juiz faz os sinais da IBJJF com a mão e o placar marca sozinho.
+
+## Como rodar
+
+O jeito mais fácil é com **Docker**: ele já instala Python, MediaPipe e baixa os modelos sozinho, sem precisar configurar mais nada.
+Depois de subir, abra **http://localhost:8000** no navegador. O painel abre com o vídeo de exemplo (`videos/teste.mp4`).
+
+### Windows (passo a passo)
+
+1. Instale o **Docker Desktop**: https://www.docker.com/products/docker-desktop/
+   (na instalação, deixe marcada a opção *Use WSL 2*; se ele pedir pra reiniciar o PC, reinicie).
+2. Abra o Docker Desktop e espere aparecer *Engine running* (ícone da baleia verde no canto da tela).
+3. Baixe o projeto: botão **Code → Download ZIP** no GitHub e extraia (ou `git clone <link-do-repositório>`).
+4. Abra a pasta extraída no Explorador de Arquivos, clique na barra de endereço, digite `powershell` e aperte Enter.
+   Um terminal abre já dentro da pasta.
+5. Rode:
+   ```powershell
+   docker compose up --build
+   ```
+   A primeira vez demora alguns minutos (baixa a imagem e os modelos). Quando aparecer `painel em http://localhost:8000`, está pronto.
+6. Abra **http://localhost:8000** no Chrome ou Edge.
+7. Pra parar: `Ctrl+C` no terminal. Das próximas vezes basta `docker compose up` (sem `--build`).
+
+Pra testar com a **webcam do notebook**: no painel, aba **Câmera do PC** e permitir o acesso à câmera no navegador.
+Funciona normalmente com o Docker, porque quem abre a câmera é o navegador.
+
+### WSL / Linux (como foi desenvolvido)
+
+Com o Docker instalado (Docker Desktop com integração WSL ligada, ou Docker Engine no Linux):
+
+```bash
+cd caminho/do/projeto
+docker compose up --build
+```
+
+E abrir **http://localhost:8000** no navegador do Windows (o WSL repassa a porta automaticamente).
+
+### Sem Docker (alternativa)
+
+Precisa do **Python 3.12** (no Windows, marque *Add python.exe to PATH* na instalação). Dentro da pasta do projeto:
+
+```powershell
+python -m venv .venv
+.venv\Scripts\activate            # no Linux/WSL: source .venv/bin/activate
+pip install mediapipe==1.1.1
+curl.exe -L -o hand_landmarker.task https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task
+curl.exe -L -o pose_landmarker_lite.task https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task
+python placar.py --fonte videos/teste.mp4
+```
+
+(no Linux/WSL use `curl` em vez de `curl.exe`). Os dois arquivos `.task` precisam ficar na mesma pasta do `placar.py`.
+
+### Testes
+
+```bash
+docker compose run --rm --entrypoint python placar test_placar.py   # com Docker
+python test_placar.py                                               # sem Docker
+```
+
+### Problemas comuns
+
+- **`docker` não é reconhecido**: o Docker Desktop não está instalado ou não está aberto. Abra e espere o *Engine running*.
+- **Porta 8000 ocupada**: troque no `compose.yaml` a linha `ports: ["8000:8000"]` por `["8080:8000"]` e abra http://localhost:8080.
+- **Câmera do PC não aparece**: abra pelo endereço `http://localhost:8000` (não pelo IP da máquina) e permita a câmera no navegador.
+
+## Como funciona
+
 O juiz faz os sinais da IBJJF com a mão e o placar marca sozinho:
 
 | Sinal | Como | Marca |
